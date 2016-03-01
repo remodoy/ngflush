@@ -131,17 +131,8 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(msg.encode("utf-8"))
         return
 
-    def do_GET(self):
-        parsed_path = urlparse(self.path)
+    def single_page(self, parsed_path, client_address):
         message_parts = []
-
-        client_address = self.client_address[0]
-
-        x_forwarded_for = get_case_insensitive(self.headers, 'x-forwarded-for')
-
-        if x_forwarded_for:
-            client_address = x_forwarded_for
-
         cache_key = get_cache_key(parsed_path.query)
         if cache_key is None:
             # cache key not found
@@ -170,6 +161,19 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         message = '\r\n'.join(message_parts)
         return self.respond(200, message)
 
+    def do_GET(self):
+        parsed_path = urlparse(self.path)
+        client_address = self.client_address[0]
+
+        x_forwarded_for = get_case_insensitive(self.headers, 'x-forwarded-for')
+
+        if x_forwarded_for:
+            client_address = x_forwarded_for
+
+        if parsed_path.path == '/single/':
+            return self.single_page(parsed_path, client_address)
+
+        return self.respond(404, "Page not found")
 
 
 def run(port=8000):

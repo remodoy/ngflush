@@ -31,13 +31,13 @@ upstream proxy-flush {
 }
 
 map $args $proxy_target {
-    "~*&ngflush=true" proxy-flush;
+    "~*(^|&)ngflush=true" proxy-flush;
     default NORMAL_BACKEND;
 }
 
 #
 map $args $use_cache {
-    "~*&ngflush=true" off;
+    "~*(^|&)ngflush=true" off;
     default CACHE_NAME;
 }
 
@@ -49,7 +49,7 @@ server {
 
 location / {
   if ($proxy_target = proxy-flush) {
-      rewrite ^(.*)$ /?CACHE_KEY break;
+      rewrite ^(.*)$ /single/?CACHE_KEY break;
   }
 
   ...
