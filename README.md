@@ -48,7 +48,7 @@ server {
 
 
 location /ngflush/ {
-    proxy_pass http://proxy-flush/pattern/
+    proxy_pass http://proxy-flush/pattern/;
 }
 
 location / {

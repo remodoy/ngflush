@@ -52,6 +52,11 @@ class TestGetCacheKey(TestCase):
                                        "/asdf/foo?asdf=foo&ngflush=true",
                                        "Get cache key failed to parse url with path")
 
+    def test_get_cache_with_url_escape(self):
+        self.assertEqual(get_cache_key("http://example/asdf/foo%3Fasdf=foo%26ngflush=true&testflush=true"),
+                         "http://example/asdf/foo?asdf=foo&ngflush=true",
+                         "Get cache key failed to parse url with url encoding")
+
 class TestKeyHashing(TestCase):
 
     def test_hash(self):

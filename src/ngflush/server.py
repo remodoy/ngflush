@@ -5,7 +5,7 @@ from .configuration import Config
 
 import http.server
 import socketserver
-from urllib.parse import urlparse
+from urllib.parse import unquote
 import hashlib
 import logging
 
@@ -84,6 +84,7 @@ def get_cache_key(url):
     :param url:
     :return:
     """
+    url = unquote(url)
     get_parameter = "&%s=" % Config.get_parameter
     get_parameter2 = "?%s=" % Config.get_parameter
     if get_parameter not in url and get_parameter2 not in url:
@@ -169,6 +170,7 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         :param client_address: Client address
         :return: None
         """
+        pattern = unquote(pattern)
         if len(pattern) < 2:
             return self.respond(400, "Invalid query, pattern too short")
 
