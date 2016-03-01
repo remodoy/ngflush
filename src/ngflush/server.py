@@ -83,9 +83,11 @@ def get_cache_key(url):
     :param url:
     :return:
     """
-    if Config.get_parameter not in url:
-        return
-    return url.split('%s=' % Config.get_parameter, 1)[1]
+    get_parameter = "&%s=" % Config.get_parameter
+    if get_parameter not in url:
+        logger.info("get_parameter not found in string")
+        return url
+    return url.split(get_parameter, 1)[0]
 
 
 def hash_from_url(url):
@@ -133,7 +135,7 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         cache_key = get_cache_key(parsed_path.query)
         if cache_key is None:
             # cache key not found
-            self.send_response(403)
+            self.send_response(400)
             self.end_headers()
             self.wfile.write(b"Cache key not provided.")
             return
@@ -142,9 +144,9 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
 
         logger.info("%s requested key remove for key (%s) %s" % (client_address, cache_key_hash, cache_key))
 
-        message_parts.append("CACHE_KEY: %s" % hash_from_url(parsed_path.query))
-
-        message_parts.append("CACHE_PATH %s" % path_from_url(parsed_path.query))
+        if Config.debug:
+            message_parts.append("CACHE_KEY: %s" % hash_from_url(parsed_path.query))
+            message_parts.append("CACHE_PATH %s" % path_from_url(parsed_path.query))
 
         path = get_path(cache_key_hash)
         if not check_path(path):
@@ -160,6 +162,8 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(str(e).encode("utf-8"))
             return
+
+        message_parts.append("Successfully removed from cache.")
 
         message_parts.append('')
         message = '\r\n'.join(message_parts)
