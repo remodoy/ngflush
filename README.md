@@ -11,29 +11,29 @@ Installation
 * Configure nginx
 
 
-    upstream proxy-flush {
+      upstream proxy-flush {
             server localhost:8000    weight=100;
 
-    }
+      }
 
-    map $args $proxy_target {
+      map $args $proxy_target {
             "~*&ngflush=true" proxy-flush;
             default web-backend-http;
-    }
+      }
 
-    #
-    map $args $use_cache {
+      #
+      map $args $use_cache {
             "~*&ngflush=true" off;
             default cache;
-    }
+      }
 
-    ...
+      ...
 
-     server {
-        ...
+      server {
+         ...
 
 
-     location / {
+      location / {
           if ($proxy_target = proxy-flush) {
                           rewrite ^(.*)$ $1?$scheme$server_name$request_uri break;
           }
@@ -43,11 +43,11 @@ Installation
           proxy_cache $use_cache;  # Prevent caching removed from cache messages.
 
           ...
-     }
+      }
 
-     ...
+      ...
 
-     }
+      }
 
 * start proxy flush
 * nginx -t && nginx -s reload
