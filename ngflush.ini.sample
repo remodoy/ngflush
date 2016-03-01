@@ -1,0 +1,7 @@
+[nginx]
+cache_path = /data/nginx/cache
+cache_levels = 1:2
+
+[flusher]
+debug = True
+get_parameter = ngflush

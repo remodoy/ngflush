@@ -1,0 +1,5 @@
+ngflush.ini
+*.pyc
+*.pyo
+__pycache__/
+*.iml
