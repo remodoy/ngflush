@@ -1,0 +1,15 @@
+[Unit]
+Description=NGFlush
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/ngflush
+ExecStart=/usr/bin/env python3 /opt/ngflush/src/ngflusher.py -c /etc/ngflush.ini
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target

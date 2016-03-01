@@ -1,56 +1,73 @@
 NGFlush
-========
+=======
 
 Simple cache flush tool for nginx.
 
 
 Installation
-==========
+============
 
 * Install python 3.
-* Configure nginx
+* Copy ngflush.ini.sample to /etc/ngflush.ini
+* Edit /etc/ngflush.ini, fix cache_path and cache_levels if needed.
+* Enable systemd service
+
+```shell
+
+cp systemd/ngflush.service /etc/systemd/system/ngflush.service
+systemctl daemon-reload
+systemctl enable ngflush.service
+systemctl start ngflush.service
+
+```
+
+* Configure Nginx, replace CACHE_KEY with proxy_cache_key value, NORMAL_BACKEND with your backend name and CACHE_NAME with cache name.
+
+```nginx
+
+upstream proxy-flush {
+    server localhost:8000    weight=100;
+
+}
+
+map $args $proxy_target {
+    "~*&ngflush=true" proxy-flush;
+    default NORMAL_BACKEND;
+}
+
+#
+map $args $use_cache {
+    "~*&ngflush=true" off;
+    default CACHE_NAME;
+}
+
+...
+
+server {
+...
 
 
-        upstream proxy-flush {
-            server localhost:8000    weight=100;
+location / {
+  if ($proxy_target = proxy-flush) {
+      rewrite ^(.*)$ /?CACHE_KEY break;
+  }
 
-        }
+  ...
 
-        map $args $proxy_target {
-            "~*&ngflush=true" proxy-flush;
-            default web-backend-http;
-        }
+  proxy_cache $use_cache;  # Prevent caching removed from cache messages.
 
-        #
-        map $args $use_cache {
-            "~*&ngflush=true" off;
-            default cache;
-        }
+  ...
+}
 
-        ...
+...
 
-        server {
-        ...
+}
+```
 
-
-        location / {
-          if ($proxy_target = proxy-flush) {
-              rewrite ^(.*)$ $1?$scheme$server_name$request_uri break;
-          }
-
-          ...
-
-          proxy_cache $use_cache;  # Prevent caching removed from cache messages.
-
-          ...
-        }
-
-        ...
-
-        }
-
-* start proxy flush
-* nginx -t && nginx -s reload
+* Restart nginx
+```shell
+nginx -t && nginx -s reload
+```
 
 
 License
