@@ -1,5 +1,6 @@
 import hashlib
 import random
+import re
 import string
 import tempfile
 from unittest import TestCase, main
@@ -125,11 +126,11 @@ class TestCacheFileFind(TestCase):
         os.rmdir(self.base_directory)
 
     def test_find_cachefiles(self):
-        files = find_cachefiles(self.base_directory, 'testing.example.com')
+        files = find_cachefiles(self.base_directory, re.compile('testing.example.com'))
         self.assertEqual(len(files), 25, "Find didn't find all files")
 
     def test_find_cachefiles_wrong_pattern(self):
-        files = find_cachefiles(self.base_directory, 'testingg.example.com')
+        files = find_cachefiles(self.base_directory, re.compile('testingg.example.com'))
         self.assertEqual(len(files), 0, "Find shouldn't find files")
 
 if __name__ == '__main__':

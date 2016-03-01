@@ -1,5 +1,6 @@
 # encoding: utf-8
 import errno
+import re
 
 from .configuration import Config
 
@@ -178,7 +179,13 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
             client_address, pattern))
 
         files_removed = 0
-        for file in find_cachefiles(Config.cache_path, pattern):
+
+        try:
+            compiled_pattern = re.compile(pattern)
+        except re.error:
+            return self.respond(400, "Invalid pattern")
+
+        for file in find_cachefiles(Config.cache_path, compiled_pattern):
             logger.debug("Flushing file %s" % file)
             flush_path(file)
             files_removed += 1

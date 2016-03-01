@@ -31,16 +31,16 @@ def find_cachefiles(directory, pattern):
     Recursively find nginx cachefiles matching given pattern
     :param directory: Base directory for search
     :param pattern: Pattern to search
-    :return:
+    :return: List of files
     """
     paths = []
     for path, dirs, files in os.walk(directory):
         for f in files:
             file_path = os.path.join(path, f)
             try:
-                with open(file_path, 'rb') as f:
-                    if pattern in get_key_from_file(f, file_path):
+                with open(file_path, 'rb') as fd:
+                    if pattern.search(get_key_from_file(fd, file_path)) is not None:
                         paths.append(file_path)
             except InvalidCacheFile as e:
-                logger.error(str(e))
+                logger.debug(str(e))
     return paths
