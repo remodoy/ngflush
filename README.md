@@ -47,10 +47,14 @@ server {
 ...
 
 
+location /ngflush/ {
+    proxy_pass http://proxy-flush/pattern/
+}
+
 location / {
   if ($proxy_target = proxy-flush) {
+      rewrite ^(.*)$ /single/CACHE_KEY break;
       set $args ""; # Get rid of duplicate arguments
-      rewrite ^(.*)$ /single/?CACHE_KEY break;
   }
 
   ...

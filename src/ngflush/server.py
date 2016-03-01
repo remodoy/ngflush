@@ -132,9 +132,9 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(msg.encode("utf-8"))
         return
 
-    def flush_single_page(self, parsed_path, client_address):
+    def flush_single_page(self, url, client_address):
         message_parts = []
-        cache_key = get_cache_key(parsed_path.query)
+        cache_key = get_cache_key(url)
         if cache_key is None:
             # cache key not found
             return self.respond(400, "Cache key not provided.")
@@ -144,8 +144,8 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         logger.info("%s requested key remove for key (%s) %s" % (client_address, cache_key_hash, cache_key))
 
         if Config.debug:
-            message_parts.append("CACHE_KEY: %s" % hash_from_url(parsed_path.query))
-            message_parts.append("CACHE_PATH %s" % path_from_url(parsed_path.query))
+            message_parts.append("CACHE_KEY: %s" % hash_from_url(url))
+            message_parts.append("CACHE_PATH %s" % path_from_url(url))
 
         path = get_path(cache_key_hash)
         if not check_path(path):
@@ -162,17 +162,15 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         message = '\r\n'.join(message_parts)
         return self.respond(200, message)
 
-    def flush_pattern(self, parsed_path, client_address):
+    def flush_pattern(self, pattern, client_address):
         """
         Flush all cachefiles whose key match to pattern
         :param parsed_path: query path
         :param client_address: Client address
         :return: None
         """
-        if len(parsed_path.query) < 2:
-            return self.respond(400, "Invalid query")
-
-        pattern = parsed_path.query
+        if len(pattern) < 2:
+            return self.respond(400, "Invalid query, pattern too short")
 
         logger.info("%s requested key remove for files matching pattern %s" % (
             client_address, pattern))
@@ -190,7 +188,6 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         Handle GET requests
         :return: None
         """
-        parsed_path = urlparse(self.path)
         client_address = self.client_address[0]
 
         x_forwarded_for = get_case_insensitive(self.headers, 'x-forwarded-for')
@@ -198,11 +195,11 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         if x_forwarded_for:
             client_address = x_forwarded_for
 
-        if parsed_path.path == '/single/':
-            return self.flush_single_page(parsed_path, client_address)
+        if self.path == '/single/':
+            return self.flush_single_page(self.path[8:], client_address)
 
-        elif parsed_path.path == '/pattern/':
-            return self.flush_pattern(parsed_path, client_address)
+        elif self.path == '/pattern/':
+            return self.flush_pattern(self.path[9:], client_address)
 
         return self.respond(404, "Page not found")
 
