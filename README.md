@@ -4,6 +4,55 @@ NGFlush
 Simple cache flush tool for nginx.
 
 
+Installation
+==========
+
+* Install python 3.
+* Configure nginx
+
+
+    upstream proxy-flush {
+            server localhost:8000    weight=100;
+
+    }
+
+    map $args $proxy_target {
+            "~*&ngflush=true" proxy-flush;
+            default web-backend-http;
+    }
+
+    #
+    map $args $use_cache {
+            "~*&ngflush=true" off;
+            default cache;
+    }
+
+    ...
+
+     server {
+        ...
+
+
+     location / {
+          if ($proxy_target = proxy-flush) {
+                          rewrite ^(.*)$ $1?$scheme$server_name$request_uri break;
+          }
+
+          ...
+
+          proxy_cache $use_cache;  # Prevent caching removed from cache messages.
+
+          ...
+     }
+
+     ...
+
+     }
+
+* start proxy flush
+* nginx -t && nginx -s reload
+
+
 License
 =======
 
