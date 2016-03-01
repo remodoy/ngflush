@@ -30,14 +30,14 @@ upstream proxy-flush {
 
 }
 
-map $args $proxy_target {
-    "~*(^|&)ngflush=true" proxy-flush;
+map $request_uri $proxy_target {
+    "~*[?&]ngflush=true" proxy-flush;
     default NORMAL_BACKEND;
 }
 
 #
-map $args $use_cache {
-    "~*(^|&)ngflush=true" off;
+map $request_uri $use_cache {
+    "~*[?&]ngflush=true" off;
     default CACHE_NAME;
 }
 
@@ -49,12 +49,13 @@ server {
 
 location / {
   if ($proxy_target = proxy-flush) {
+      set $args ""; # Get rid of duplicate arguments
       rewrite ^(.*)$ /single/?CACHE_KEY break;
   }
 
   ...
 
-  proxy_cache $use_cache;  # Prevent caching removed from cache messages.
+  proxy_cache $use_cache;  # Prevent caching responses from ngflush.
 
   ...
 }
