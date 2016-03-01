@@ -84,10 +84,14 @@ def get_cache_key(url):
     :return:
     """
     get_parameter = "&%s=" % Config.get_parameter
-    if get_parameter not in url:
+    get_parameter2 = "?%s=" % Config.get_parameter
+    if get_parameter not in url and get_parameter2 not in url:
         logger.info("get_parameter not found in string")
         return url
-    return url.split(get_parameter, 1)[0]
+    elif get_parameter in url:
+        return url.split(get_parameter, 1)[0]
+    else:
+        return url.split(get_parameter2, 1)[0]
 
 
 def hash_from_url(url):
