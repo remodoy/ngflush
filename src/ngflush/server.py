@@ -125,6 +125,12 @@ def get_case_insensitive(dictionary, key):
 
 class FlushHandler(http.server.BaseHTTPRequestHandler):
 
+    def respond(self, error, msg):
+        self.send_response(error)
+        self.end_headers()
+        self.wfile.write(msg.encode("utf-8"))
+        return
+
     def do_GET(self):
         parsed_path = urlparse(self.path)
         message_parts = []
@@ -139,10 +145,7 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         cache_key = get_cache_key(parsed_path.query)
         if cache_key is None:
             # cache key not found
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Cache key not provided.")
-            return
+            return self.respond(400, "Cache key not provided.")
 
         cache_key_hash = get_key_hash(cache_key)
 
@@ -154,27 +157,18 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
 
         path = get_path(cache_key_hash)
         if not check_path(path):
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Not found from cache.")
-            return
+            return self.respond(404, "Page not found from cache.")
 
         try:
             flush_path(path)
         except FlushException as e:
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(str(e).encode("utf-8"))
-            return
+            return self.respond(500, str(e))
 
         message_parts.append("Successfully removed from cache.")
 
         message_parts.append('')
         message = '\r\n'.join(message_parts)
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(message.encode("utf-8"))
-        return
+        return self.respond(200, message)
 
 
 
