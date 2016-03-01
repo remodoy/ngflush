@@ -11,6 +11,7 @@ import logging
 
 import os.path
 import os
+from ngflush.cachefiles import find_cachefiles
 
 logger = logging.getLogger("ngflush")
 
@@ -131,7 +132,7 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(msg.encode("utf-8"))
         return
 
-    def single_page(self, parsed_path, client_address):
+    def flush_single_page(self, parsed_path, client_address):
         message_parts = []
         cache_key = get_cache_key(parsed_path.query)
         if cache_key is None:
@@ -161,7 +162,34 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         message = '\r\n'.join(message_parts)
         return self.respond(200, message)
 
+    def flush_pattern(self, parsed_path, client_address):
+        """
+        Flush all cachefiles whose key match to pattern
+        :param parsed_path: query path
+        :param client_address: Client address
+        :return: None
+        """
+        if len(parsed_path.query) < 2:
+            return self.respond(400, "Invalid query")
+
+        pattern = parsed_path.query
+
+        logger.info("%s requested key remove for files matching pattern %s" % (
+            client_address, pattern))
+
+        files_removed = 0
+        for file in find_cachefiles(Config.cache_path, pattern):
+            logger.debug("Flushing file %s" % file)
+            flush_path(file)
+            files_removed += 1
+
+        return self.respond(200, "%d files matching pattern '%s' removed" % (files_removed, pattern))
+
     def do_GET(self):
+        """
+        Handle GET requests
+        :return: None
+        """
         parsed_path = urlparse(self.path)
         client_address = self.client_address[0]
 
@@ -171,7 +199,10 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
             client_address = x_forwarded_for
 
         if parsed_path.path == '/single/':
-            return self.single_page(parsed_path, client_address)
+            return self.flush_single_page(parsed_path, client_address)
+
+        elif parsed_path.path == '/pattern/':
+            return self.flush_pattern(parsed_path, client_address)
 
         return self.respond(404, "Page not found")
 
