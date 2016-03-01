@@ -195,10 +195,10 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         if x_forwarded_for:
             client_address = x_forwarded_for
 
-        if self.path == '/single/':
+        if self.path.startswith('/single/'):
             return self.flush_single_page(self.path[8:], client_address)
 
-        elif self.path == '/pattern/':
+        elif self.path.startswith('/pattern/'):
             return self.flush_pattern(self.path[9:], client_address)
 
         return self.respond(404, "Page not found")
