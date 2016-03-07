@@ -84,19 +84,34 @@ class TestCacheFileParsing(TestCase):
     def setUp(self):
         self.cachefile = io.BytesIO()
         self.cachefile.write(b"\x03" + b"\x00" * 144)
-        self.cachefile.write(b"KEY: httptesting.example.com/testing\n")
+        self.cachefile.write(b"KEY: httptesting.example.com/testing\r\n")
+        self.cachefile.write(b"HTTP/1.1 200 OK\r\n")
+        self.cachefile.write(b"Server: nginx\r\n")
+        self.cachefile.write(b"Content-Type: text/xml; charset=utf-8\r\n")
+        self.cachefile.write(b"\r\n")
+        self.cachefile.write(b"\x03" * 100)
         self.cachefile.seek(0)
 
         self.broken_cachefile = io.BytesIO(b"\x00" * 145)
 
     def test_parsing_invalid_file(self):
+
         with self.assertRaises(InvalidCacheFile):
-            get_key_from_file(self.broken_cachefile, "testing")
+            CacheFile.from_file(self.broken_cachefile, "testing")
 
     def test_parsing_valid_file(self):
-        self.assertEqual(get_key_from_file(self.cachefile, "testing"),
+        cachefile = CacheFile.from_file(self.cachefile, "testing")
+        self.assertEqual(cachefile.key,
                          "httptesting.example.com/testing",
-                         "Invalid key returned from get_key_from_file")
+                         "Invalid key returned")
+
+    def test_parsing_valid_file_headers(self):
+        cachefile = CacheFile.from_file(self.cachefile, "testing")
+        self.assertTrue("content-type" in cachefile.headers,
+                        "Content-Type header not in cachefile")
+        self.assertEqual(cachefile.headers['content-type'],
+                         "text/xml; charset=utf-8",
+                         "Invalid content-type returned")
 
 
 class TestCacheFileFind(TestCase):

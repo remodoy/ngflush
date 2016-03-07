@@ -8,25 +8,38 @@ class InvalidCacheFile(Exception):
     pass
 
 
-def get_key_from_file(file, path):
-    """
-    Get KEY: from cachefile
+class CacheFile(object):
+    def __init__(self, file, path):
+        self.file = file
+        self.path = path
+        self.key = None
+        self.headers = {}
+        self.parse_file()
+        self.file.close()
 
-    KEY: is located in position 145, so value starts from 145 + 5 = 150
-    Key value ends with newline.
-    :param path: path to file
-    :return: KEY from file
-    """
-    # Check file magic header
-    file.seek(0)
-    magic = file.read(8)
-    if magic != b"\x03\x00\x00\x00\x00\x00\x00\x00":
-        raise InvalidCacheFile("Invalid cache file %s" % path)
-    file.seek(150)
-    return file.readline().decode("utf-8").rstrip('\n')
+    @classmethod
+    def from_file(cls, file, path):
+        return CacheFile(file, path)
+
+    def parse_file(self):
+        self.file.seek(0)
+        magic = self.file.read(8)
+        if magic != b"\x03\x00\x00\x00\x00\x00\x00\x00":
+            raise InvalidCacheFile("Invalid cache file %s" % self.path)
+        self.file.seek(150)
+        self.key = self.file.readline().decode("utf-8").rstrip('\n').rstrip('\r')
+        # Read HTTP line
+        self.file.readline()
+        while True:
+            line = self.file.readline()
+            line = line.decode("utf-8", errors="replace").rstrip('\n').rstrip('\r')
+            if len(line) == 0:
+                break
+            key, value = line.split(":", 1)
+            self.headers[key.lower().strip()] = value.strip()
 
 
-def find_cachefiles(directory, pattern):
+def find_cachefiles(directory, pattern, content_type=None):
     """
     Recursively find nginx cachefiles matching given pattern
     :param directory: Base directory for search
@@ -39,8 +52,15 @@ def find_cachefiles(directory, pattern):
             file_path = os.path.join(path, f)
             try:
                 with open(file_path, 'rb') as fd:
-                    if pattern.search(get_key_from_file(fd, file_path)) is not None:
-                        paths.append(file_path)
+                    cachefile = CacheFile.from_file(fd, file_path)
+                    if pattern.search(cachefile.key) is not None:
+                        if content_type:
+                            if 'content-type' in cachefile.headers:
+                                t = cachefile.headers['content-type']
+                                if content_type.search(t) is not None:
+                                    paths.append(file_path)
+                        else:
+                            paths.append(file_path)
             except InvalidCacheFile as e:
                 logger.debug(str(e))
     return paths

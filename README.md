@@ -48,7 +48,7 @@ server {
 
 
 location /ngflush/ {
-    proxy_pass http://proxy-flush/pattern/;
+    proxy_pass http://proxy-flush/multiple/;
 }
 
 location / {
@@ -73,6 +73,12 @@ location / {
 ```shell
 nginx -t && nginx -s reload
 ```
+
+Usage
+=====
+
+* Add &ngflush=true to end of url to flush single page.
+* Use /ngflush/?pattern=regexp[&content-type=regex] to remove multiple pages
 
 
 License

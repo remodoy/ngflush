@@ -6,7 +6,7 @@ from .configuration import Config
 
 import http.server
 import socketserver
-from urllib.parse import unquote
+from urllib.parse import unquote, parse_qs, quote
 import hashlib
 import logging
 
@@ -19,7 +19,6 @@ logger = logging.getLogger("ngflush")
 
 class FlushException(Exception):
     pass
-
 
 
 def get_key_hash(cache_key):
@@ -108,6 +107,7 @@ def hash_from_url(url):
         return
     return get_key_hash(cache_key)
 
+
 def path_from_url(url):
     """
     Get path for given key
@@ -126,6 +126,7 @@ def get_case_insensitive(dictionary, key):
         if k.lower() == key:
             return v
 
+
 class FlushHandler(http.server.BaseHTTPRequestHandler):
 
     def respond(self, error, msg):
@@ -136,6 +137,9 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
 
     def flush_single_page(self, url, client_address):
         message_parts = []
+
+        url = quote(url)
+
         cache_key = get_cache_key(url)
         if cache_key is None:
             # cache key not found
@@ -164,14 +168,28 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         message = '\r\n'.join(message_parts)
         return self.respond(200, message)
 
-    def flush_pattern(self, pattern, client_address):
+    def flush_pattern(self, url, client_address):
         """
         Flush all cachefiles whose key match to pattern
         :param parsed_path: query path
         :param client_address: Client address
         :return: None
         """
-        pattern = unquote(pattern)
+
+        parts = parse_qs(url.lstrip("?"))
+
+        print(parts)
+
+        if 'pattern' not in parts:
+            return self.respond(400, "Invalid query, pattern missing")
+
+        pattern = ''.join(parts['pattern'])
+
+        content_type = None
+
+        if 'content-type' in parts:
+            content_type = ''.join(parts['content-type'])
+
         if len(pattern) < 2:
             return self.respond(400, "Invalid query, pattern too short")
 
@@ -185,7 +203,13 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         except re.error:
             return self.respond(400, "Invalid pattern")
 
-        for file in find_cachefiles(Config.cache_path, compiled_pattern):
+        if content_type:
+            try:
+                content_type = re.compile(content_type)
+            except re.error:
+                return self.respond(400, "Invalid content-type")
+
+        for file in find_cachefiles(Config.cache_path, compiled_pattern, content_type):
             logger.debug("Flushing file %s" % file)
             flush_path(file)
             files_removed += 1
@@ -207,8 +231,8 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
         if self.path.startswith('/single/'):
             return self.flush_single_page(self.path[8:], client_address)
 
-        elif self.path.startswith('/pattern/'):
-            return self.flush_pattern(self.path[9:], client_address)
+        elif self.path.startswith('/multiple/'):
+            return self.flush_pattern(self.path[10:], client_address)
 
         return self.respond(404, "Page not found")
 
