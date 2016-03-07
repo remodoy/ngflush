@@ -140,8 +140,6 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
 
         cache_key = get_cache_key(url)
 
-        cache_key = quote(cache_key)
-
         if cache_key is None:
             # cache key not found
             return self.respond(400, "Cache key not provided.")
