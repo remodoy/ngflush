@@ -138,9 +138,10 @@ class FlushHandler(http.server.BaseHTTPRequestHandler):
     def flush_single_page(self, url, client_address):
         message_parts = []
 
-        url = quote(url)
-
         cache_key = get_cache_key(url)
+
+        cache_key = quote(cache_key)
+
         if cache_key is None:
             # cache key not found
             return self.respond(400, "Cache key not provided.")
