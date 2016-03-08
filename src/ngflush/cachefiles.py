@@ -27,16 +27,21 @@ class CacheFile(object):
         if magic != b"\x03\x00\x00\x00\x00\x00\x00\x00":
             raise InvalidCacheFile("Invalid cache file %s" % self.path)
         self.file.seek(150)
-        self.key = self.file.readline().decode("utf-8").rstrip('\n').rstrip('\r')
-        # Read HTTP line
-        self.file.readline()
-        while True:
-            line = self.file.readline()
-            line = line.decode("utf-8", errors="replace").rstrip('\n').rstrip('\r')
-            if len(line) == 0:
-                break
-            key, value = line.split(":", 1)
-            self.headers[key.lower().strip()] = value.strip()
+        try:
+            self.key = self.file.readline().decode("utf-8", errors="replace").rstrip('\n').rstrip('\r')
+            # Read HTTP line
+            self.file.readline()
+            while True:
+                line = self.file.readline()
+                if len(line) == 2:
+                    break
+                line = line.decode("utf-8", errors="replace").rstrip('\n').rstrip('\r')
+                if len(line.strip()) == 0:
+                    break
+                key, value = line.split(":", 1)
+                self.headers[key.lower().strip()] = value.strip()
+        except Exception as e:
+            raise InvalidCacheFile("Invalid cache file %s" % self.path)
 
 
 def find_cachefiles(directory, pattern, content_type=None):

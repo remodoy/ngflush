@@ -87,11 +87,15 @@ def get_cache_key(url):
     url = unquote(url)
     get_parameter = "&%s=" % Config.get_parameter
     get_parameter2 = "?%s=" % Config.get_parameter
-    if get_parameter not in url and get_parameter2 not in url:
+    get_parameter3 = "/%s/" % Config.get_parameter
+    if get_parameter not in url and get_parameter2 not in url and get_parameter3 not in url:
         logger.info("get_parameter not found in string")
         return url
     elif get_parameter in url:
         return url.split(get_parameter, 1)[0]
+    elif get_parameter3 in url:
+        parts = url.split(get_parameter3, 1)
+        return parts[0] + "/" +  parts[1]
     else:
         return url.split(get_parameter2, 1)[0]
 
