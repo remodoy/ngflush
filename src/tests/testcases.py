@@ -66,20 +66,30 @@ class TestKeyHashing(TestCase):
                          "Hashlib don't return correct md5 value")
 
 
-def create_cachefile(filehandle, prefix):
+def create_cachefile_v3(filehandle, prefix):
 
     path = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(4, 10)))
     key = "KEY: %s/%s\n" % (prefix.rstrip('/'), path)
 
     filehandle.write(b"\x03")
-    for i in range(144):
-        filehandle.write(b"\x00")
+    filehandle.write(b"\x00" * 144)
+    filehandle.write(key.encode("utf-8"))
+    filehandle.flush()
+    filehandle.seek(0)
+
+def create_cachefile_v5(filehandle, prefix):
+
+    path = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(4, 10)))
+    key = "KEY: %s/%s\n" % (prefix.rstrip('/'), path)
+
+    filehandle.write(b"\x03")
+    filehandle.write(b"\x00" * 335)
     filehandle.write(key.encode("utf-8"))
     filehandle.flush()
     filehandle.seek(0)
 
 
-class TestCacheFileParsing(TestCase):
+class TestCacheFileParsingV3(TestCase):
 
     def setUp(self):
         self.cachefile = io.BytesIO()
@@ -113,6 +123,21 @@ class TestCacheFileParsing(TestCase):
                          "text/xml; charset=utf-8",
                          "Invalid content-type returned")
 
+class TestCacheFileParsingV5(TestCacheFileParsingV3):
+
+    def setUp(self):
+        self.cachefile = io.BytesIO()
+        self.cachefile.write(b"\x05" + ( b"\x00" * 335))
+        self.cachefile.write(b"\x0a")
+        self.cachefile.write(b"KEY: httptesting.example.com/testing\r\n")
+        self.cachefile.write(b"HTTP/1.1 200 OK\r\n")
+        self.cachefile.write(b"Server: nginx\r\n")
+        self.cachefile.write(b"Content-Type: text/xml; charset=utf-8\r\n")
+        self.cachefile.write(b"\r\n")
+        self.cachefile.write(b"\x05" * 100)
+        self.cachefile.seek(0)
+        self.broken_cachefile = io.BytesIO(b"\x00" * 336)
+
 
 class TestCacheFileFind(TestCase):
     def setUp(self):
@@ -127,7 +152,7 @@ class TestCacheFileFind(TestCase):
             for i in range(5):
                 f, path = tempfile.mkstemp(dir=dir, text=False)
                 fd = os.fdopen(f, 'r+b')
-                create_cachefile(fd, "httptesting.example.com/")
+                create_cachefile_v3(fd, "httptesting.example.com/")
                 self.files.append((fd, path))
 
     def tearDown(self):

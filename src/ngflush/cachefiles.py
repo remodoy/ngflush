@@ -24,11 +24,20 @@ class CacheFile(object):
     def parse_file(self):
         self.file.seek(0)
         magic = self.file.read(8)
-        if magic != b"\x03\x00\x00\x00\x00\x00\x00\x00":
+        if magic == b"\x03\x00\x00\x00\x00\x00\x00\x00":
+            self.file.seek(145)
+        elif magic == b"\x05\x00\x00\x00\x00\x00\x00\x00":
+            self.file.seek(337)
+        else:
             raise InvalidCacheFile("Invalid cache file %s" % self.path)
-        self.file.seek(150)
         try:
+            if self.file.read(5) != b"KEY: ":
+                logger.error("Failed to parse cache file %s, key not found", self.path)
+                raise InvalidCacheFile("Invalid cache file %s" % self.path)
             self.key = self.file.readline().decode("utf-8", errors="replace").rstrip('\n').rstrip('\r')
+            if not self.key:
+                logger.error("Failed to parse cache file %s, invalid key", self.path)
+                raise InvalidCacheFile("Invalid cache file %s" % self.path)
             # Read HTTP line
             self.file.readline()
             while True:
@@ -41,6 +50,7 @@ class CacheFile(object):
                 key, value = line.split(":", 1)
                 self.headers[key.lower().strip()] = value.strip()
         except Exception as e:
+            logger.exception("Failed to parse cache file %s", self.path)
             raise InvalidCacheFile("Invalid cache file %s" % self.path)
 
 
